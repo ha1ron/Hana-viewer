@@ -1,5 +1,5 @@
 *&---------------------------------------------------------------------*
-*& Report ZHANA_VIEWER
+*& Report Z92_HANA_VIEWER
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
@@ -54,6 +54,7 @@ FORM EXECUTE_QUERY.
   get run time field data(ts_start).
 
   data_tab = zcl_sql_executor=>result_hana_model( exporting i_query = sql
+                                                            i_top = conv string( rows )
                                                   importing e_catalog = fieldcatalog
                                                             e_patch = catalog_name
                                                             e_model_name = cube_name

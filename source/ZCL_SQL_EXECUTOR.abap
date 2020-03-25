@@ -24,6 +24,7 @@ public section.
     importing
       value(I_CON_NAME) type STRING default 'DEFAULT'
       value(I_QUERY) type STRING
+      value(I_TOP) type STRING optional
       value(I_EXECUTE) type CHAR1 default ABAP_TRUE
     exporting
       value(E_CATALOG) type LVC_T_FCAT
@@ -39,20 +40,21 @@ private section.
 
   class-methods GET_CATALOG_FROM_HANA_MODEL
     importing
-      !I_SQL type STRING
+      value(I_SQL) type STRING
+      value(I_TOP) type STRING optional
     exporting
-      !E_CATALOG type LVC_T_FCAT
-      !E_SQL type STRING
-      !E_SCHEMA type STRING
-      !E_PATCH type STRING
-      !E_MODEL_NAME type STRING .
+      value(E_CATALOG) type LVC_T_FCAT
+      value(E_SQL) type STRING
+      value(E_SCHEMA) type STRING
+      value(E_PATCH) type STRING
+      value(E_MODEL_NAME) type STRING .
   class-methods GET_MODEL_META
     importing
-      !I_SQL type STRING
+      value(I_SQL) type STRING
     exporting
-      !E_CATALOG_NAME type STRING
-      !E_CUBE_NAME type STRING
-      !E_REQUEST_TAIL type STRING .
+      value(E_CATALOG_NAME) type STRING
+      value(E_CUBE_NAME) type STRING
+      value(E_REQUEST_TAIL) type STRING .
   class-methods APPEND_FIELD
     importing
       !I_META_LINE type CL_RSDD_HANA_MODEL=>TN_S_METADATA
@@ -124,6 +126,7 @@ CLASS ZCL_SQL_EXECUTOR IMPLEMENTATION.
 * | Static Private Method ZCL_SQL_EXECUTOR=>GET_CATALOG_FROM_HANA_MODEL
 * +-------------------------------------------------------------------------------------------------+
 * | [--->] I_SQL                          TYPE        STRING
+* | [--->] I_TOP                          TYPE        STRING(optional)
 * | [<---] E_CATALOG                      TYPE        LVC_T_FCAT
 * | [<---] E_SQL                          TYPE        STRING
 * | [<---] E_SCHEMA                       TYPE        STRING
@@ -206,10 +209,11 @@ CLASS ZCL_SQL_EXECUTOR IMPLEMENTATION.
 
     endif.
 
-    e_sql = |select { e_sql } from "{ e_schema }"."{ e_patch }/{ e_model_name }" { request_tail }|.
-*    if strlen( request_tail ) > 0.
-*      e_sql = |{ e_sql } { request_tail }|.
-*    endif.
+    if i_top > 0.
+      data(top) = |top { i_top }|.
+    endif.
+
+    e_sql = |select { top } { e_sql } from "{ e_schema }"."{ e_patch }/{ e_model_name }" { request_tail }|.
 
   endmethod.
 
@@ -279,6 +283,7 @@ CLASS ZCL_SQL_EXECUTOR IMPLEMENTATION.
 * +-------------------------------------------------------------------------------------------------+
 * | [--->] I_CON_NAME                     TYPE        STRING (default ='DEFAULT')
 * | [--->] I_QUERY                        TYPE        STRING
+* | [--->] I_TOP                          TYPE        STRING(optional)
 * | [--->] I_EXECUTE                      TYPE        CHAR1 (default =ABAP_TRUE)
 * | [<---] E_CATALOG                      TYPE        LVC_T_FCAT
 * | [<---] E_COMM                         TYPE        STRING
@@ -292,6 +297,7 @@ CLASS ZCL_SQL_EXECUTOR IMPLEMENTATION.
 
     try .
         zcl_sql_executor=>get_catalog_from_hana_model( exporting i_sql = i_query
+                                                                 i_top = i_top
                                                        importing e_catalog = e_catalog
                                                                  e_schema = e_schema
                                                                  e_patch = e_patch
