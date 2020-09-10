@@ -22,8 +22,9 @@ data: editor_container type ref to cl_gui_custom_container,
 
 field-symbols: <tab> type any table.
 
-data: sql  type string,
-      rows type i value 1000.
+data: sql          type string,
+      rows         type i value 1000,
+      in_screen(1).
 
 start-of-selection.
   call screen 200.
@@ -65,8 +66,16 @@ FORM EXECUTE_QUERY.
 
   assign data_tab->* to <tab>.
 
+  if lines( <tab> ) < 2000.
+    perform creaty_numbering changing fieldcatalog <tab>.
+  endif.
+
   if comm is initial.
-    call screen 100.
+    if in_screen = abap_true.
+      call screen 200.
+    else.
+      call screen 100.
+    endif.
   else.
     message comm type 'I'.
   endif.
@@ -161,4 +170,79 @@ MODULE TEXT_INIT OUTPUT.
 
   endif.
 
+* экран справа
+  if in_screen = abap_true.
+
+    if container is not initial.
+      grid->free( ).
+      container->free( ).
+    endif.
+
+    free: container, grid.
+
+    container = new #( side  = cl_gui_docking_container=>dock_at_right
+                       ratio =  50 ).
+
+    grid = new #( container )." cl_gui_container=>screen0 ).
+
+    layout-cwidth_opt = abap_true.
+    layout-grid_title = |Время исполнения { timepassed_seconds } ms|.
+
+    if <tab> is assigned.
+      grid->set_table_for_first_display( exporting is_layout            = layout
+                                          changing it_outtab            = <tab>
+                                                   it_fieldcatalog      = fieldcatalog ).
+    endif.
+
+
+  endif.
+
 ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  CREATY_NUMBERING
+*&---------------------------------------------------------------------*
+FORM CREATY_NUMBERING changing f_catalog type lvc_t_fcat
+                               p_tab type standard table.
+
+  loop at f_catalog assigning field-symbol(<catalog>).
+    <catalog>-col_pos = <catalog>-col_pos + 1.
+  endloop.
+
+  data: fcat_property type lvc_s_fcat.
+  fcat_property-col_pos = 1.
+  fcat_property-fieldname = 'ROWS_NUMBER'.
+  fcat_property-outputlen = 3.
+  fcat_property-datatype = 'INT4'.
+  fcat_property-intlen = 3.
+  fcat_property-just = abap_true.
+  fcat_property-lowercase = abap_true.
+  append fcat_property to f_catalog.
+
+  data: num_data type ref to data.
+
+  call method cl_alv_table_create=>create_dynamic_table
+    exporting
+      it_fieldcatalog           = f_catalog
+    importing
+      ep_table                  = num_data
+    exceptions
+      generate_subpool_dir_full = 1
+      others                    = 2.
+  if sy-subrc <> 0.
+
+  endif.
+
+  field-symbols: <num_data> type standard table.
+  assign num_data->* to <num_data>.
+
+  move-corresponding p_tab to <num_data>.
+
+  data(num_filed) = '<line>-ROWS_NUMBER'.
+  loop at <num_data> assigning field-symbol(<line>).
+    assign (num_filed) to field-symbol(<value>).
+    <value> = sy-tabix.
+  endloop.
+
+  assign num_data->* to <tab>.
+
+ENDFORM.
